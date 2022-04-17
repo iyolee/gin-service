@@ -1,8 +1,11 @@
 package routers
 
 import (
+	"gin-service/global"
 	"gin-service/internal/middleware"
+	"gin-service/internal/routers/api"
 	v1 "gin-service/internal/routers/api/v1"
+	"net/http"
 
 	docs "gin-service/docs"
 
@@ -23,6 +26,11 @@ func NewRouter() *gin.Engine {
 
 	article := v1.NewArticle()
 	tag := v1.NewTag()
+
+	upload := api.NewUpload()
+	r.POST("/upload/file", upload.UploadFile)
+	// 需要设置文件服务去提供静态资源的访问
+	r.StaticFS("/static", http.Dir(global.AppSetting.UploadSavePath))
 
 	apiv1 := r.Group("api/v1")
 
