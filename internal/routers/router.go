@@ -1,6 +1,7 @@
 package routers
 
 import (
+	"gin-service/internal/middleware"
 	v1 "gin-service/internal/routers/api/v1"
 
 	docs "gin-service/docs"
@@ -14,6 +15,7 @@ func NewRouter() *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
+	r.Use(middleware.Translations())
 
 	// https://github.com/swaggo/gin-swagger
 	docs.SwaggerInfo.BasePath = "/api/v1"
