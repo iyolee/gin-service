@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"gin-service/global"
 	"gin-service/internal/model"
 	"gin-service/internal/routers"
@@ -8,13 +9,26 @@ import (
 	"gin-service/pkg/setting"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
+var (
+	port      string
+	runMode   string
+	config    string
+	isVersion bool
+)
+
 func init() {
-	err := setupSetting()
+	err := setupFlag()
+	if err != nil {
+		log.Fatalf("init.setupFlag err: %v", err)
+	}
+
+	err = setupSetting()
 	if err != nil {
 		log.Fatalf("init.setupSetting err: %v", err)
 	}
@@ -42,8 +56,18 @@ func main() {
 	s.ListenAndServe()
 }
 
+func setupFlag() error {
+	flag.StringVar(&port, "port", "", "启动端口")
+	flag.StringVar(&runMode, "mode", "", "启动模式")
+	flag.StringVar(&config, "config", "configs/", "指定要使用的配置文件路径")
+	flag.BoolVar(&isVersion, "version", false, "编译信息")
+	flag.Parse()
+
+	return nil
+}
+
 func setupSetting() error {
-	setting, err := setting.NewSetting()
+	setting, err := setting.NewSetting(strings.Split(config, ",")...)
 	if err != nil {
 		return err
 	}
@@ -59,8 +83,15 @@ func setupSetting() error {
 	if err != nil {
 		return err
 	}
+	global.AppSetting.DefaultContextTimeout *= time.Second
 	global.ServerSetting.ReadTimeout *= time.Second
 	global.ServerSetting.WriteTimeout *= time.Second
+	if port != "" {
+		global.ServerSetting.HttpPort = port
+	}
+	if runMode != "" {
+		global.ServerSetting.RunMode = runMode
+	}
 	return nil
 }
 
@@ -74,9 +105,10 @@ func setupDBEngine() error {
 }
 
 func setupLogger() error {
+	fileName := global.AppSetting.LogSavePath + "/" + global.AppSetting.LogFileName + global.AppSetting.LogFileExt
 	global.Logger = logger.NewLogger(&lumberjack.Logger{
-		Filename:  global.AppSetting.LogSavePath + "/" + global.AppSetting.LogFileName + global.AppSetting.LogFileExt,
-		MaxSize:   600,
+		Filename:  fileName,
+		MaxSize:   500,
 		MaxAge:    10,
 		LocalTime: true,
 	}, "", log.LstdFlags).WithCaller(2)
